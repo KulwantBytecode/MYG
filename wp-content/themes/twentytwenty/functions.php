@@ -807,3 +807,79 @@ function twentytwenty_get_elements_array() {
 	 */
 	return apply_filters( 'twentytwenty_get_elements_array', $elements );
 }
+
+
+function products_shortcode() {
+
+    // Pagination parameters
+    $paged = ( get_query_var('paged') ) ? get_query_var('paged') : 1;
+    $posts_per_page = 10; // Change this number as needed
+
+    // The Query
+    $args = array(
+        'post_type'      => 'my_products', // Change 'my_products' to your actual custom post type
+        'posts_per_page' => $posts_per_page,
+        'paged'          => $paged,
+    );
+
+    // Search parameter
+    if (isset($_GET['search'])) {
+        $args['s'] = sanitize_text_field($_GET['search']);
+    }
+
+    $products_query = new WP_Query($args);
+
+    // Start output buffering
+    ob_start();
+
+    // Search form
+    // echo '<form class="search_form_product" role="search" method="get" action="' . esc_url(home_url('/')) . '">
+    //         <input type="hidden" name="post_type" value="my_products" />
+    //         <input type="search" name="search" placeholder="Search Products" value="' . get_search_query() . '" />
+    //         <button type="submit">Search</button>
+    //       </form>';
+
+    // The Loop
+    if ($products_query->have_posts()) {
+        echo '<div class="product-container">';
+
+        while ($products_query->have_posts()) : $products_query->the_post();
+
+            // Get featured image
+            $featured_image_url = get_the_post_thumbnail_url(get_the_ID(), 'medium');
+            // Get custom field 'url'
+            // $custom_url = get_post_meta(product_link(), 'url', true);
+			$custom_url = get_field( 'product_link', get_the_ID() );
+            // Display each product
+            echo '<a href="' . get_permalink() . '">
+                    <div class="single-product">';
+            if ($featured_image_url) {
+                echo '<div class="product_image"><img class="" src="' . esc_url($featured_image_url) . '" alt="' . esc_attr(get_the_title()) . '" /></div>';
+            }
+            the_title('<h2>', '</h2>');
+            echo '<a href="'  .$custom_url . '">Buy Now</a></div></a>
+			';
+
+        endwhile;
+
+        echo '</div>';
+
+        // Pagination links
+        echo paginate_links(array(
+            'total'   => $products_query->max_num_pages,
+            'current' => max(1, get_query_var('paged')),
+        ));
+
+        /* Restore original Post Data */
+        wp_reset_postdata();
+	}
+    else {
+        // If no products found
+        echo 'No products found';
+	}
+
+    // End output buffering and return content
+    return ob_get_clean();
+}
+add_shortcode('products', 'products_shortcode');
+
